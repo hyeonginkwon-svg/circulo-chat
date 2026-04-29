@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Circulo</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f0f10;
+    --bg2: #1a1a1c;
+    --bg3: #232326;
+    --bg4: #2e2e32;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #f0ede8;
+    --text2: #aaa59e;
+    --text3: #6d6862;
+    --accent: #d4a853;
+    --accent2: #e8c87a;
+    --green: #4caf7d;
+    --red: #e05c5c;
+    --radius: 14px;
+    --radius-sm: 9px;
+  }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100dvh;
+    overflow: hidden;
+  }
+  button, input, textarea { font-family: 'DM Sans', sans-serif; }
+  button { cursor: pointer; }
+  #app { width: 100%; height: 100dvh; max-width: 820px; margin: 0 auto; display: flex; flex-direction: column; }
+  .view { display: none; width: 100%; height: 100%; }
+  .view.active { display: flex; }
+
+  .brand { display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .logo-mark { width: 48px; height: 48px; border-radius: 50%; border: 1.5px solid var(--accent); display:flex; align-items:center; justify-content:center; }
+  .logo-mark svg { width: 22px; height: 22px; stroke: var(--accent); fill: none; stroke-width: 1.5; }
+  .logo-text { font-size: 22px; font-weight: 300; letter-spacing: 4px; text-transform: uppercase; }
+  .logo-sub { font-size: 12px; color: var(--text3); letter-spacing: 1px; }
+
+  .auth-screen { flex-direction: column; align-items: center; justify-content: center; padding: 24px; gap: 26px; }
+  .card { width: 100%; max-width: 390px; background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 22px; display:flex; flex-direction:column; gap: 14px; }
+  .tabs { display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
+  .tab { border: 0.5px solid var(--border); background: var(--bg3); color: var(--text2); border-radius: var(--radius-sm); padding: 9px; font-size: 13px; }
+  .tab.active { background: rgba(212,168,83,0.16); color: var(--accent2); border-color: var(--accent); }
+  .field { display:flex; flex-direction:column; gap: 6px; }
+  .field label { font-size: 11px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; }
+  .field input { background: var(--bg3); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 11px 13px; font-size: 14px; color: var(--text); outline: none; }
+  .field input:focus { border-color: var(--accent); }
+  .field input::placeholder { color: var(--text3); }
+  .primary-btn { background: var(--accent); color: #0f0f10; border: none; border-radius: var(--radius-sm); padding: 11px 13px; font-weight: 600; font-size: 13px; letter-spacing: .2px; }
+  .primary-btn:hover { background: var(--accent2); }
+  .secondary-btn { background: var(--bg3); color: var(--text2); border: 0.5px solid var(--border2); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 12px; }
+  .secondary-btn:hover { border-color: var(--accent); color: var(--text); }
+  .danger-btn:hover { border-color: var(--red); color: var(--red); }
+  .err, .notice { display:none; font-size: 12px; line-height: 1.45; text-align: center; }
+  .err { color: var(--red); }
+  .notice { color: var(--accent2); }
+
+  /* Rooms */
+  .rooms-screen { flex-direction: column; min-height: 0; }
+  .topbar { flex-shrink: 0; padding: 15px 20px; display:flex; align-items:center; justify-content:space-between; border-bottom: 0.5px solid var(--border); background: var(--bg); }
+  .top-title { display:flex; align-items:center; gap:10px; }
+  .mini-logo { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--accent); display:flex; align-items:center; justify-content:center; color: var(--accent); font-size: 16px; }
+  .top-title h1 { font-size: 15px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; }
+  .user-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .rooms-body { flex:1; overflow-y:auto; padding: 18px 20px 28px; display:grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .panel { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 17px; display:flex; flex-direction:column; gap: 12px; }
+  .panel h2 { font-size: 13px; font-weight: 600; color: var(--text); }
+  .panel-desc { font-size: 12px; color: var(--text3); line-height: 1.5; }
+  .inline-form { display:grid; grid-template-columns: 1fr auto; gap: 8px; align-items:end; }
+  .create-grid { display:grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items:end; }
+  .room-list { display:flex; flex-direction:column; gap: 9px; }
+  .room-card { width:100%; text-align:left; background: var(--bg3); border: 0.5px solid var(--border); border-radius: 12px; padding: 13px 14px; display:flex; justify-content:space-between; gap:10px; color: var(--text); }
+  .room-card:hover { border-color: var(--accent); background: #28282b; }
+  .room-name { font-size: 14px; font-weight: 600; }
+  .room-code { margin-top: 3px; font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; }
+  .room-role { align-self:center; font-size: 10px; color: var(--accent2); border: 0.5px solid rgba(212,168,83,.35); border-radius: 99px; padding: 3px 7px; }
+  .empty { color: var(--text3); font-size: 13px; line-height: 1.5; padding: 6px 2px; }
+
+  @media (min-width: 760px) {
+    .rooms-body { grid-template-columns: 1.1fr .9fr; align-items:start; }
+    .rooms-main { grid-row: span 2; }
+  }
+  @media (max-width: 560px) {
+    .inline-form, .create-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Chat */
+  .chat-screen { flex-direction: column; min-height: 0; }
+  .chat-header { flex-shrink: 0; padding: 13px 16px; border-bottom: 0.5px solid var(--border); display:flex; align-items:center; justify-content:space-between; background: var(--bg); gap: 10px; }
+  .header-left { min-width:0; display:flex; align-items:center; gap: 10px; }
+  .back-btn { width: 34px; height: 34px; border-radius: 50%; background: var(--bg3); color: var(--text2); border: 0.5px solid var(--border); font-size: 18px; line-height:1; }
+  .back-btn:hover { border-color: var(--accent); color: var(--text); }
+  .online-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .chat-title { min-width:0; }
+  .chat-title .name { font-size: 14px; font-weight: 600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .chat-title .code { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; margin-top:2px; }
+
+  .messages-wrap { position:relative; flex:1; min-height:0; }
+  .messages { height:100%; overflow-y:auto; padding: 18px 20px; display:flex; flex-direction:column; gap: 14px; background: var(--bg); scroll-behavior:auto; }
+  .messages::-webkit-scrollbar { width: 3px; }
+  .messages::-webkit-scrollbar-track { background: transparent; }
+  .messages::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .new-msg-btn { display:none; position:absolute; left:50%; bottom:14px; transform:translateX(-50%); z-index:5; border:none; border-radius:99px; background: var(--accent); color:#0f0f10; font-size:12px; font-weight:600; padding: 8px 13px; box-shadow: 0 8px 25px rgba(0,0,0,.35); }
+  .new-msg-btn.show { display:block; }
+  .scroll-state { color: var(--accent2); font-size: 11px; border: 0.5px solid rgba(212,168,83,.26); border-radius:99px; padding:4px 8px; display:none; }
+  .scroll-state.show { display:inline-block; }
+
+  .sys-msg { text-align:center; font-size: 11px; color: var(--text3); letter-spacing:.3px; }
+  .msg-row { display:flex; gap:10px; align-items:flex-end; animation: fadeUp .22s ease; }
+  @keyframes fadeUp { from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none} }
+  .msg-row.mine { flex-direction:row-reverse; }
+  .avatar { width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; flex-shrink:0; font-family:'DM Mono', monospace; }
+  .bubble-wrap { display:flex; flex-direction:column; gap:4px; max-width:68%; }
+  .msg-row.mine .bubble-wrap { align-items:flex-end; }
+  .msg-sender { font-size:10px; color:var(--text3); letter-spacing:.3px; }
+  .bubble { padding: 9px 14px; border-radius:16px; font-size:14px; line-height:1.55; word-break:break-word; }
+  .bubble.theirs { background:var(--bg3); border:0.5px solid var(--border); color:var(--text); border-bottom-left-radius:4px; }
+  .bubble.mine { background:var(--accent); color:#0f0f10; border-bottom-right-radius:4px; }
+  .bubble img { max-width:240px; border-radius:10px; display:block; margin-top:2px; }
+  .msg-meta { display:flex; align-items:center; gap:7px; font-size:10px; color:var(--text3); }
+  .msg-row.mine .msg-meta { flex-direction:row-reverse; }
+  .read-count { color: var(--accent); }
+  .reactions { display:flex; align-items:center; gap:4px; flex-wrap:wrap; max-width:100%; }
+  .msg-row.mine .reactions { justify-content:flex-end; }
+  .reaction-chip, .react-add, .picker-btn { min-height:24px; border-radius:999px; border:0.5px solid var(--border); background:var(--bg2); color:var(--text2); padding:3px 8px; font-size:12px; cursor:pointer; }
+  .reaction-chip:hover, .react-add:hover, .picker-btn:hover { border-color:var(--accent); color:var(--text); }
+  .reaction-chip.active { background:rgba(212,168,83,0.16); border-color:var(--accent); color:var(--accent2); }
+  .reaction-picker { display:none; gap:4px; padding:4px; border:0.5px solid var(--border); background:var(--bg2); border-radius:999px; }
+  .reaction-picker.open { display:flex; }
+
+  #preview-bar { display:none; padding:8px 20px; border-top:0.5px solid var(--border); background:var(--bg2); align-items:center; gap:10px; flex-shrink:0; }
+  #preview-bar img { width:44px; height:44px; object-fit:cover; border-radius:6px; }
+  #preview-bar span { font-size:12px; color:var(--text2); flex:1; }
+  #preview-bar button { background:none; border:none; color:var(--text3); font-size:16px; }
+  #preview-bar button:hover { color:var(--red); }
+  .input-area { position:relative; padding:13px 16px; border-top:0.5px solid var(--border); background:var(--bg); display:flex; align-items:flex-end; gap:9px; flex-shrink:0; }
+  .img-btn, .emoji-btn { width:38px; height:38px; background:var(--bg3); border:0.5px solid var(--border); border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:var(--text2); font-size:17px; }
+  .img-btn:hover, .emoji-btn:hover { border-color:var(--accent); }
+  .img-btn svg { width:16px; height:16px; stroke:var(--text2); fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+  .emoji-panel { position:absolute; left:64px; bottom:60px; display:none; grid-template-columns:repeat(8, 30px); gap:5px; padding:9px; background:var(--bg2); border:0.5px solid var(--border2); border-radius:var(--radius); box-shadow:0 10px 30px rgba(0,0,0,.28); z-index:10; }
+  .emoji-panel.open { display:grid; }
+  .emoji-panel button { width:30px; height:30px; border:none; background:var(--bg3); border-radius:8px; font-size:16px; }
+  .emoji-panel button:hover { background:rgba(255,255,255,.08); }
+  #msg-input { flex:1; background:var(--bg3); border:0.5px solid var(--border); border-radius:19px; padding:9px 16px; font-size:14px; color:var(--text); resize:none; max-height:120px; outline:none; line-height:1.5; }
+  #msg-input:focus { border-color:var(--border2); }
+  #msg-input::placeholder { color:var(--text3); }
+  .send-btn { width:38px; height:38px; border-radius:50%; background:var(--accent); border:none; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .send-btn:hover { background:var(--accent2); }
+  .send-btn svg { width:15px; height:15px; fill:#0f0f10; }
+  #file-input { display:none; }
+  .connecting { display:flex; align-items:center; justify-content:center; flex:1; flex-direction:column; gap:12px; color:var(--text3); font-size:13px; }
+  .spinner { width:20px; height:20px; border:1.5px solid var(--border2); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; }
+  .auth-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .text-btn { background:none; border:0; color:var(--accent2); font-size:12px; padding:4px 0; text-align:left; }
+  .text-btn:hover { color:var(--accent); text-decoration:underline; }
+  .auth-help { margin-top:10px; color:var(--text3); font-size:11px; line-height:1.5; }
+  .reset-box { display:none; margin-top:12px; padding-top:12px; border-top:0.5px solid var(--border); }
+  .reset-box.open { display:block; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+</style>
+</head>
+<body>
+<div id="app">
+  <section id="auth-view" class="view auth-screen active">
+    <div class="brand">
+      <div class="logo-mark"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></svg></div>
+      <div class="logo-text">Circulo</div>
+      <div class="logo-sub">이메일 형식 ID로 로그인하고 채팅방을 관리하세요</div>
+    </div>
+    <div class="card">
+      <div class="tabs">
+        <button class="tab active" id="login-tab" onclick="setAuthMode('login')">로그인</button>
+        <button class="tab" id="signup-tab" onclick="setAuthMode('signup')">회원가입</button>
+      </div>
+      <div class="field">
+        <label>이메일 ID</label>
+        <input type="email" id="auth-email" placeholder="예: hyeongin@circulo.test" autocomplete="email" />
+      </div>
+      <div class="field">
+        <label>비밀번호</label>
+        <input type="password" id="auth-password" placeholder="6자 이상" autocomplete="current-password" />
+      </div>
+      <div class="field" id="nickname-field" style="display:none">
+        <label>닉네임</label>
+        <input type="text" id="auth-nickname" placeholder="채팅방에 표시될 이름" maxlength="16" autocomplete="nickname" />
+      </div>
+      <div class="err" id="auth-err"></div>
+      <div class="notice" id="auth-notice"></div>
+      <button class="primary-btn" id="auth-submit" onclick="submitAuth()">로그인</button>
+      <div class="auth-help">무료 운영 모드: 실제 이메일 인증 없이, 이메일 형식만 ID처럼 사용합니다.<br>예: hyeongin@circulo.test / friend01@circulo.test</div>
+    </div>
+  </section>
+
+  <section id="rooms-view" class="view rooms-screen">
+    <div class="topbar">
+      <div class="top-title">
+        <div class="mini-logo">+</div>
+        <div>
+          <h1>Circulo</h1>
+          <div class="user-meta" id="profile-meta"></div>
+        </div>
+      </div>
+      <button class="secondary-btn danger-btn" onclick="signOut()">로그아웃</button>
+    </div>
+    <div class="rooms-body">
+      <div class="panel rooms-main">
+        <h2>내 채팅방</h2>
+        <div class="panel-desc">가입/입장한 방만 목록에 표시됩니다. 방을 누르면 이전 대화를 이어서 볼 수 있어요.</div>
+        <div class="room-list" id="room-list"><div class="empty">로딩 중...</div></div>
+      </div>
+      <div class="panel">
+        <h2>초대 코드로 입장</h2>
+        <div class="inline-form">
+          <div class="field"><label>초대 코드</label><input type="text" id="join-code" placeholder="예: DEMO-1234" autocomplete="off" /></div>
+          <button class="primary-btn" onclick="joinRoomByCode()">입장</button>
+        </div>
+        <div class="err" id="room-err"></div>
+      </div>
+      <div class="panel">
+        <h2>새 채팅방 만들기</h2>
+        <div class="create-grid">
+          <div class="field"><label>방 이름</label><input type="text" id="new-room-name" placeholder="예: 친구방" maxlength="30" /></div>
+          <div class="field"><label>방 코드</label><input type="text" id="new-room-code" placeholder="예: FRIEND-2026" maxlength="30" /></div>
+          <button class="primary-btn" onclick="createRoom()">생성</button>
+        </div>
+        <div class="panel-desc">방 코드는 영문/숫자/하이픈만 권장. 만든 방은 내 채팅방에 바로 추가됩니다.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="chat-view" class="view chat-screen">
+    <div class="chat-header">
+      <div class="header-left">
+        <button class="back-btn" onclick="backToRooms()">‹</button>
+        <div class="online-dot"></div>
+        <div class="chat-title">
+          <div class="name" id="room-title">채팅방</div>
+          <div class="code" id="room-code"></div>
+        </div>
+      </div>
+      <span class="scroll-state" id="scroll-state">스크롤 고정 중</span>
+    </div>
+    <div class="messages-wrap">
+      <div class="messages" id="messages"></div>
+      <button class="new-msg-btn" id="new-msg-btn" onclick="scrollBottom(true)">새 메시지 보기 ↓</button>
+    </div>
+    <div id="preview-bar">
+      <img id="preview-img" src="" alt="" />
+      <span id="preview-name"></span>
+      <button onclick="cancelImg()">✕</button>
+    </div>
+    <div class="input-area">
+      <div class="emoji-panel" id="emoji-panel"></div>
+      <button class="img-btn" onclick="document.getElementById('file-input').click()" title="이미지 업로드">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      </button>
+      <button class="emoji-btn" onclick="toggleEmojiPanel()" title="이모지">😊</button>
+      <input type="file" id="file-input" accept="image/*" onchange="handleImg(event)" />
+      <textarea id="msg-input" rows="1" placeholder="메시지를 입력하세요... 캡처 이미지는 Ctrl+V로 붙여넣기" onkeydown="handleKey(event)" oninput="resize(this)"></textarea>
+      <button class="send-btn" onclick="send()"><svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg></button>
+    </div>
+  </section>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://zhqetddaqtexaofrlpoo.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpocWV0ZGRhcXRleGFvZnJscG9vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MTA5MDMsImV4cCI6MjA5Mjk4NjkwM30.dBj7xPY-u1jTTJ4zveexsXXaHdmF0NPisNbJotO2-N0';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+});
+const AUTH_REDIRECT_URL = window.location.origin + window.location.pathname;
+
+const COLORS = ['#d4a853','#4caf7d','#5b8dd9','#c07bc0','#e07b5b','#5bbcb8'];
+const EMOJIS = ['😊','😂','👍','❤️','🔥','👏','🙌','😮','😢','🙏','🎉','✨','✅','👀','💯','🤔'];
+const REACTION_EMOJIS = ['👍','❤️','😂','🔥','👏','😮'];
+
+let authMode = 'login';
+let currentUser = null;
+let currentProfile = null;
+let rooms = [];
+let currentRoom = null;
+let currentRoomName = null;
+let pendingImg = null;
+let channel = null;
+let pollTimer = null;
+let renderedIds = new Set();
+let messageCache = new Map();
+let readMap = new Map();
+let reactionMap = new Map();
+let scrollLocked = false;
+
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function showErr(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg || '';
+  el.style.display = msg ? 'block' : 'none';
+}
+function showNotice(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg || '';
+  el.style.display = msg ? 'block' : 'none';
+}
+function friendlyAuthError(message = '') {
+  const m = String(message);
+  if (/email rate limit/i.test(m)) return '현재 이메일 인증 메일 발송이 시도되고 있습니다. Supabase에서 Confirm email을 OFF로 변경해 주세요.';
+  if (/Email not confirmed/i.test(m)) return '이메일 인증이 켜져 있습니다. 무료 운영 모드에서는 Supabase에서 Confirm email을 OFF로 변경해야 합니다.';
+  if (/Invalid login credentials/i.test(m)) return '이메일 또는 비밀번호가 맞지 않거나 아직 회원가입이 완료되지 않았습니다.';
+  return m || '처리 중 오류가 발생했습니다.';
+}
+function setAuthLoading(isLoading) {
+  const btn = document.getElementById('auth-submit');
+  btn.disabled = isLoading;
+  btn.textContent = isLoading ? '처리 중...' : (authMode === 'signup' ? '회원가입' : '로그인');
+}
+function esc(s = '') { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
+function initials(name) { return (name || '?').slice(0,2).toUpperCase(); }
+function formatTime(value) {
+  const d = value ? new Date(value) : new Date();
+  return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+}
+function getColor(seed) {
+  const str = String(seed || 'circulo');
+  const i = [...str].reduce((a,c) => a + c.charCodeAt(0), 0) % COLORS.length;
+  return COLORS[i];
+}
+function makeRoomCode() {
+  const raw = Math.random().toString(36).slice(2, 8).toUpperCase();
+  return 'ROOM-' + raw;
+}
+function isMine(row) { return row.sender_id === currentUser?.id; }
+function senderName(row) { return row.sender_nickname || row.sender || 'Unknown'; }
+
+function initUI() {
+  const panel = document.getElementById('emoji-panel');
+  panel.innerHTML = EMOJIS.map(e => `<button type="button" onclick="insertEmoji('${e}')">${e}</button>`).join('');
+  document.getElementById('msg-input').addEventListener('paste', handlePaste);
+  document.getElementById('messages').addEventListener('scroll', handleMessageScroll);
+  document.getElementById('new-room-code').value = makeRoomCode();
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.emoji-panel') && !e.target.closest('.emoji-btn')) document.getElementById('emoji-panel').classList.remove('open');
+    if (!e.target.closest('.reaction-picker') && !e.target.closest('.react-add')) document.querySelectorAll('.reaction-picker.open').forEach(p => p.classList.remove('open'));
+  });
+  ['auth-email','auth-password','auth-nickname'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => { if(e.key === 'Enter') submitAuth(); });
+  });
+  document.getElementById('join-code').addEventListener('keydown', e => { if(e.key === 'Enter') joinRoomByCode(); });
+}
+
+function setAuthMode(mode) {
+  authMode = mode;
+  document.getElementById('login-tab').classList.toggle('active', mode === 'login');
+  document.getElementById('signup-tab').classList.toggle('active', mode === 'signup');
+  document.getElementById('nickname-field').style.display = mode === 'signup' ? 'flex' : 'none';
+  document.getElementById('auth-submit').textContent = mode === 'signup' ? '회원가입' : '로그인';
+  document.getElementById('auth-password').setAttribute('autocomplete', mode === 'signup' ? 'new-password' : 'current-password');
+  document.getElementById('reset-box').classList.remove('open');
+  showErr('auth-err', '');
+  showNotice('auth-notice', '');
+}
+
+async function submitAuth() {
+  showErr('auth-err', '');
+  showNotice('auth-notice', '');
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const nickname = document.getElementById('auth-nickname').value.trim();
+  if (!email || !password) return showErr('auth-err', '이메일과 비밀번호를 입력해 주세요.');
+  if (authMode === 'signup' && !nickname) return showErr('auth-err', '닉네임을 입력해 주세요.');
+
+  setAuthLoading(true);
+  try {
+    if (authMode === 'signup') {
+      const { data, error } = await sb.auth.signUp({
+        email,
+        password,
+        options: { data: { nickname }, emailRedirectTo: AUTH_REDIRECT_URL }
+      });
+      if (error) return showErr('auth-err', friendlyAuthError(error.message));
+      if (!data.session) {
+        setAuthMode('login');
+        showErr('auth-err', '가입은 되었지만 바로 로그인 세션이 생성되지 않았습니다. Supabase에서 Authentication → Providers → Email → Confirm email을 OFF로 바꾼 뒤 다시 시도해 주세요.');
+        return;
+      }
+      currentUser = data.user;
+      await ensureProfile(nickname);
+      await enterRoomsView();
+    } else {
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) return showErr('auth-err', friendlyAuthError(error.message));
+      currentUser = data.user;
+      await ensureProfile();
+      await enterRoomsView();
+    }
+  } finally {
+    setAuthLoading(false);
+  }
+}
+
+// 무료 운영 모드에서는 인증 메일/비밀번호 재설정 메일을 사용하지 않습니다.
+// 비밀번호를 잊은 계정은 Supabase Dashboard → Authentication → Users에서 관리자가 처리해야 합니다.
+
+async function boot() {
+  initUI();
+  const { data } = await sb.auth.getSession();
+  if (data.session?.user) {
+    currentUser = data.session.user;
+    await ensureProfile();
+    await enterRoomsView();
+  } else {
+    showView('auth-view');
+  }
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_OUT') {
+      currentUser = null;
+      currentProfile = null;
+      leaveChatInternals();
+      showView('auth-view');
+    } else if (session?.user && !currentUser) {
+      currentUser = session.user;
+      await ensureProfile();
+      await enterRoomsView();
+    }
+  });
+}
+
+async function ensureProfile(forcedNickname) {
+  if (!currentUser) return;
+  const fallbackNick = currentUser.user_metadata?.nickname || currentUser.email?.split('@')[0] || 'User';
+  const nickname = forcedNickname || fallbackNick;
+  const color = getColor(currentUser.id);
+  const payload = { id: currentUser.id, email: currentUser.email, nickname, color, updated_at: new Date().toISOString() };
+  const { error } = await sb.from('profiles').upsert(payload, { onConflict: 'id' });
+  if (error) console.warn('profile upsert error:', error.message);
+  const { data } = await sb.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
+  currentProfile = data || payload;
+}
+
+async function signOut() { await sb.auth.signOut(); }
+
+async function enterRoomsView() {
+  leaveChatInternals();
+  showView('rooms-view');
+  document.getElementById('profile-meta').textContent = `${currentProfile?.nickname || currentUser.email} · ${currentUser.email}`;
+  await loadRooms();
+}
+
+async function loadRooms() {
+  const list = document.getElementById('room-list');
+  list.innerHTML = '<div class="empty">채팅방을 불러오는 중...</div>';
+  const { data, error } = await sb
+    .from('room_members')
+    .select('room, role, joined_at, rooms(code,name,created_at)')
+    .order('joined_at', { ascending: false });
+  if (error) {
+    list.innerHTML = `<div class="empty">방 목록을 불러오지 못했어요.<br>${esc(error.message)}</div>`;
+    return;
+  }
+  rooms = (data || []).map(r => ({ code: r.rooms?.code || r.room, name: r.rooms?.name || r.room, role: r.role, joined_at: r.joined_at }));
+  renderRooms();
+}
+
+function renderRooms() {
+  const list = document.getElementById('room-list');
+  if (!rooms.length) {
+    list.innerHTML = '<div class="empty">아직 입장한 채팅방이 없습니다.<br>초대 코드로 입장하거나 새 채팅방을 만들어 주세요.</div>';
+    return;
+  }
+  list.innerHTML = rooms.map(r => `
+    <button class="room-card" data-code="${esc(r.code)}" data-name="${esc(r.name)}">
+      <span><div class="room-name">${esc(r.name)}</div><div class="room-code">${esc(r.code)}</div></span>
+      <span class="room-role">${esc(r.role || 'member')}</span>
+    </button>`).join('');
+  list.querySelectorAll('.room-card').forEach(btn => {
+    btn.addEventListener('click', () => openRoom(btn.dataset.code, btn.dataset.name));
+  });
+}
+
+async function joinRoomByCode() {
+  showErr('room-err', '');
+  const code = document.getElementById('join-code').value.trim().toUpperCase();
+  if (!code) return showErr('room-err', '초대 코드를 입력해 주세요.');
+  const { data, error } = await sb.rpc('join_room_by_code', { p_code: code });
+  if (error) return showErr('room-err', error.message);
+  if (!data || !data.length) return showErr('room-err', '존재하지 않는 초대 코드입니다.');
+  document.getElementById('join-code').value = '';
+  await loadRooms();
+  openRoom(data[0].code, data[0].name);
+}
+
+async function createRoom() {
+  showErr('room-err', '');
+  const name = document.getElementById('new-room-name').value.trim();
+  const code = document.getElementById('new-room-code').value.trim().toUpperCase() || makeRoomCode();
+  if (!name) return showErr('room-err', '새 채팅방 이름을 입력해 주세요.');
+  const { data, error } = await sb.rpc('create_room', { p_code: code, p_name: name });
+  if (error) return showErr('room-err', error.message);
+  document.getElementById('new-room-name').value = '';
+  document.getElementById('new-room-code').value = makeRoomCode();
+  await loadRooms();
+  if (data?.[0]) openRoom(data[0].code, data[0].name);
+}
+
+async function openRoom(code, name) {
+  currentRoom = code;
+  currentRoomName = name;
+  renderedIds = new Set();
+  messageCache = new Map();
+  readMap = new Map();
+  reactionMap = new Map();
+  scrollLocked = false;
+
+  document.getElementById('room-title').textContent = name;
+  document.getElementById('room-code').textContent = code;
+  document.getElementById('messages').innerHTML = '<div class="connecting"><div class="spinner"></div><span>메시지를 불러오는 중...</span></div>';
+  hideNewMessageButton();
+  showView('chat-view');
+
+  await loadChatData(true);
+  subscribeRealtime(code);
+  startPolling();
+  document.getElementById('msg-input').focus();
+}
+
+function backToRooms() {
+  leaveChatInternals();
+  enterRoomsView();
+}
+
+function leaveChatInternals() {
+  if (channel) sb.removeChannel(channel);
+  if (pollTimer) clearInterval(pollTimer);
+  channel = null;
+  pollTimer = null;
+  currentRoom = null;
+  currentRoomName = null;
+  cancelImg();
+  hideNewMessageButton();
+}
+
+async function loadChatData(initial = false) {
+  if (!currentRoom) return;
+  const shouldStick = initial || isAtBottom();
+  const [msgRes, readRes, reactionRes] = await Promise.all([
+    sb.from('messages').select('*').eq('room', currentRoom).order('created_at', { ascending: true }),
+    sb.from('message_reads').select('*').eq('room', currentRoom),
+    sb.from('message_reactions').select('*').eq('room', currentRoom)
+  ]);
+  if (msgRes.error) console.warn('messages load error:', msgRes.error.message);
+  if (readRes.error) console.warn('reads load error:', readRes.error.message);
+  if (reactionRes.error) console.warn('reactions load error:', reactionRes.error.message);
+
+  buildReadMap(readRes.data || []);
+  buildReactionMap(reactionRes.data || []);
+  const area = document.getElementById('messages');
+  if (initial) area.innerHTML = '';
+  const beforeCount = renderedIds.size;
+  (msgRes.data || []).forEach(row => renderMsg(row));
+  refreshAllReadLabels();
+  refreshAllReactions();
+  await markMessagesRead(msgRes.data || []);
+
+  if (initial || shouldStick) scrollBottom(true);
+  else if (renderedIds.size > beforeCount) showNewMessageButton();
+}
+
+function buildReadMap(rows) {
+  readMap = new Map();
+  rows.forEach(r => {
+    if (!r.reader_id) return;
+    const key = String(r.message_id);
+    if (!readMap.has(key)) readMap.set(key, new Set());
+    readMap.get(key).add(r.reader_id);
+  });
+}
+function buildReactionMap(rows) { reactionMap = new Map(); rows.forEach(addReactionToMap); }
+function addReactionToMap(r) {
+  if (!r.reactor_id) return;
+  const key = String(r.message_id);
+  if (!reactionMap.has(key)) reactionMap.set(key, new Map());
+  if (!reactionMap.get(key).has(r.emoji)) reactionMap.get(key).set(r.emoji, new Set());
+  reactionMap.get(key).get(r.emoji).add(r.reactor_id);
+}
+function removeReactionFromMap(r) {
+  const key = String(r.message_id);
+  const emojiMap = reactionMap.get(key);
+  if (!emojiMap) return;
+  const users = emojiMap.get(r.emoji);
+  if (!users) return;
+  users.delete(r.reactor_id);
+  if (users.size === 0) emojiMap.delete(r.emoji);
+  if (emojiMap.size === 0) reactionMap.delete(key);
+}
+
+function subscribeRealtime(code) {
+  if (channel) sb.removeChannel(channel);
+  channel = sb.channel('room:' + code)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: 'room=eq.' + code }, payload => {
+      const mine = payload.new.sender_id === currentUser?.id;
+      const shouldStick = mine || isAtBottom();
+      renderMsg(payload.new);
+      markMessagesRead([payload.new]);
+      if (shouldStick) scrollBottom(true); else showNewMessageButton();
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'message_reads', filter: 'room=eq.' + code }, payload => {
+      const r = payload.new;
+      const key = String(r.message_id);
+      if (!readMap.has(key)) readMap.set(key, new Set());
+      if (r.reader_id) readMap.get(key).add(r.reader_id);
+      updateReadLabel(key);
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'message_reactions', filter: 'room=eq.' + code }, payload => {
+      addReactionToMap(payload.new);
+      renderReactions(payload.new.message_id);
+    })
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'message_reactions', filter: 'room=eq.' + code }, payload => {
+      removeReactionFromMap(payload.old);
+      renderReactions(payload.old.message_id);
+    })
+    .subscribe(status => console.log('Realtime:', status));
+}
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(() => loadChatData(false), 5000);
+}
+
+function renderMsg(row) {
+  const area = document.getElementById('messages');
+  const id = String(row.id);
+  if (renderedIds.has(id)) return;
+  renderedIds.add(id);
+  messageCache.set(id, row);
+
+  const mine = isMine(row);
+  const name = senderName(row);
+  const color = row.color || getColor(row.sender_id || name);
+  const bg = color + '22';
+  const content = row.img_url
+    ? `<img src="${esc(row.img_url)}" alt="이미지" onload="handleImageLoad()" />`
+    : esc(row.content || '').replace(/\n/g, '<br>');
+
+  const div = document.createElement('div');
+  div.className = 'msg-row' + (mine ? ' mine' : '');
+  div.dataset.id = id;
+  div.innerHTML = `
+    <div class="avatar" style="background:${bg};color:${color}">${esc(initials(name))}</div>
+    <div class="bubble-wrap">
+      ${!mine ? `<div class="msg-sender">${esc(name)}</div>` : ''}
+      <div class="bubble ${mine ? 'mine' : 'theirs'}">${content}</div>
+      <div class="msg-meta">
+        <span class="msg-time">${formatTime(row.created_at)}</span>
+        ${mine ? `<span class="read-count" data-id="${id}"></span>` : ''}
+      </div>
+      <div class="reactions" id="reactions-${id}"></div>
+    </div>`;
+  area.appendChild(div);
+  updateReadLabel(id);
+  renderReactions(id);
+}
+
+async function markMessagesRead(rows) {
+  if (!currentRoom || !currentUser) return;
+  const payloads = (rows || [])
+    .filter(row => row?.id && row.sender_id !== currentUser.id)
+    .map(row => ({ message_id: row.id, room: currentRoom, reader_id: currentUser.id, reader_nickname: currentProfile?.nickname || currentUser.email }));
+  if (!payloads.length) return;
+  const { error } = await sb.from('message_reads').upsert(payloads, { onConflict: 'message_id,reader_id', ignoreDuplicates: true });
+  if (error) console.warn('read insert error:', error.message);
+}
+function updateReadLabel(messageId) {
+  const id = String(messageId);
+  const el = document.querySelector(`.read-count[data-id="${CSS.escape(id)}"]`);
+  if (!el) return;
+  const readers = readMap.get(id) || new Set();
+  const count = [...readers].filter(uid => uid !== currentUser?.id).length;
+  el.textContent = count > 0 ? `읽음 ${count}` : '안읽음';
+}
+function refreshAllReadLabels() { document.querySelectorAll('.read-count').forEach(el => updateReadLabel(el.dataset.id)); }
+
+function renderReactions(messageId) {
+  const id = String(messageId);
+  const box = document.getElementById('reactions-' + id);
+  if (!box) return;
+  const emojiMap = reactionMap.get(id) || new Map();
+  const chips = [...emojiMap.entries()].map(([emoji, users]) => {
+    const active = users.has(currentUser?.id) ? ' active' : '';
+    return `<button class="reaction-chip${active}" onclick="toggleReaction('${id}', '${emoji}')">${emoji} ${users.size}</button>`;
+  }).join('');
+  const pickerButtons = REACTION_EMOJIS.map(e => `<button class="picker-btn" onclick="toggleReaction('${id}', '${e}')">${e}</button>`).join('');
+  box.innerHTML = `${chips}<button class="react-add" onclick="toggleReactionPicker(event, '${id}')">＋</button><div class="reaction-picker" id="picker-${id}">${pickerButtons}</div>`;
+}
+function refreshAllReactions() { messageCache.forEach((_, id) => renderReactions(id)); }
+function toggleReactionPicker(event, messageId) {
+  event.stopPropagation();
+  const picker = document.getElementById('picker-' + messageId);
+  if (!picker) return;
+  document.querySelectorAll('.reaction-picker.open').forEach(p => { if (p !== picker) p.classList.remove('open'); });
+  picker.classList.toggle('open');
+}
+async function toggleReaction(messageId, emoji) {
+  if (!currentUser) return;
+  const id = String(messageId);
+  const users = reactionMap.get(id)?.get(emoji);
+  const hasMine = users?.has(currentUser.id);
+  if (hasMine) {
+    const { error } = await sb.from('message_reactions').delete().eq('message_id', Number(id)).eq('reactor_id', currentUser.id).eq('emoji', emoji);
+    if (error) console.warn('reaction delete error:', error.message);
+  } else {
+    const { error } = await sb.from('message_reactions').insert({ message_id: Number(id), room: currentRoom, reactor_id: currentUser.id, reactor_nickname: currentProfile?.nickname || currentUser.email, emoji });
+    if (error && !String(error.message).includes('duplicate')) console.warn('reaction insert error:', error.message);
+  }
+}
+
+async function send() {
+  if (!currentRoom || !currentUser) return;
+  const nickname = currentProfile?.nickname || currentUser.email;
+  const color = currentProfile?.color || getColor(currentUser.id);
+  if (pendingImg) {
+    const { error } = await sb.from('messages').insert({ room: currentRoom, sender: nickname, sender_id: currentUser.id, sender_nickname: nickname, color, img_url: pendingImg, content: '' });
+    if (error) console.warn('send image error:', error.message);
+    cancelImg();
+    scrollBottom(true);
+    return;
+  }
+  const inp = document.getElementById('msg-input');
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+  inp.style.height = 'auto';
+  document.getElementById('emoji-panel').classList.remove('open');
+  const { error } = await sb.from('messages').insert({ room: currentRoom, sender: nickname, sender_id: currentUser.id, sender_nickname: nickname, color, content: text });
+  if (error) console.warn('send error:', error.message);
+  scrollBottom(true);
+}
+
+function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }
+function resize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
+function toggleEmojiPanel() { document.getElementById('emoji-panel').classList.toggle('open'); }
+function insertEmoji(emoji) {
+  const input = document.getElementById('msg-input');
+  const start = input.selectionStart;
+  const end = input.selectionEnd;
+  input.value = input.value.slice(0, start) + emoji + input.value.slice(end);
+  input.focus();
+  input.selectionStart = input.selectionEnd = start + emoji.length;
+  resize(input);
+}
+
+function handleImg(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  loadImageFile(file, file.name || 'image');
+  e.target.value = '';
+}
+function handlePaste(e) {
+  const items = e.clipboardData?.items || [];
+  for (const item of items) {
+    if (item.type && item.type.startsWith('image/')) {
+      const file = item.getAsFile();
+      if (file) {
+        e.preventDefault();
+        loadImageFile(file, '붙여넣은 이미지');
+      }
+      return;
+    }
+  }
+}
+function loadImageFile(file, name) {
+  if (!file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    pendingImg = ev.target.result;
+    document.getElementById('preview-img').src = pendingImg;
+    document.getElementById('preview-name').textContent = name + ' · 전송 버튼을 누르면 업로드됩니다';
+    document.getElementById('preview-bar').style.display = 'flex';
+  };
+  reader.readAsDataURL(file);
+}
+function cancelImg() {
+  pendingImg = null;
+  document.getElementById('preview-bar').style.display = 'none';
+  document.getElementById('preview-img').src = '';
+  document.getElementById('preview-name').textContent = '';
+}
+
+function isAtBottom() {
+  const a = document.getElementById('messages');
+  return a.scrollHeight - a.scrollTop - a.clientHeight < 90;
+}
+function handleMessageScroll() {
+  scrollLocked = !isAtBottom();
+  document.getElementById('scroll-state').classList.toggle('show', scrollLocked);
+  if (!scrollLocked) hideNewMessageButton();
+}
+function scrollBottom(force = false) {
+  const a = document.getElementById('messages');
+  requestAnimationFrame(() => {
+    if (force || isAtBottom()) {
+      a.scrollTop = a.scrollHeight;
+      scrollLocked = false;
+      document.getElementById('scroll-state').classList.remove('show');
+      hideNewMessageButton();
+    }
+  });
+}
+function showNewMessageButton() { document.getElementById('new-msg-btn').classList.add('show'); }
+function hideNewMessageButton() { document.getElementById('new-msg-btn').classList.remove('show'); }
+function handleImageLoad() { if (isAtBottom() && !scrollLocked) scrollBottom(true); }
+
+window.addEventListener('beforeunload', () => leaveChatInternals());
+boot();
+</script>
+</body>
+</html>
